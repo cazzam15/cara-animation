@@ -1,12 +1,23 @@
 // core.js: constants, helpers, paper, paint wrapper, compositing and render hooks.
 // Length and rhythm come from PROJECT in config.js.
-const W = 1920, H = 1080;
-const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = 12, DUR = PROJECT.duration;
+// The canvas is 1920×1080, or 1080×1920 for Shorts when the page is opened with ?vertical (render.mjs --vertical).
+// Scenes pick per-format values with fmt(landscape, vertical), usually just for the camera.
+const VERT = /[?&]vertical\b/.test(location.search);
+const W = VERT ? 1080 : 1920, H = VERT ? 1920 : 1080;
+const fmt = (land, vert) => VERT ? vert : land;
+const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = PROJECT.boil || 10, DUR = PROJECT.duration;   // boil 10×/s = a new drawing every 3 frames at 30 fps
 const TAU = Math.PI * 2;
 const PAL = {
   paper: '#F3EBDC', ink: '#2B2233', clay: '#D97757', clayDk: '#A84D33', clayLt: '#F2A283',
   night: '#1F2550', indigo: '#2F3C7A', rose: '#E27A92', ochre: '#E8AA38', sap: '#6E9F58',
   teal: '#3A9C98', violet: '#7B5CA8', cream: '#FFF5E2', sky: '#8EC3E6'
+};
+// SOFT: the Cara series palette. Bright, soft and friendly: see CARA_STYLE_GUIDE.md before adding colours.
+const SOFT = {
+  sky: '#BFE3F2', skyDeep: '#93CBE6', cloud: '#FFF8EC', sun: '#FFE08A',
+  grass: '#9CD37F', meadow: '#7CC06E', hillMid: '#79B77A', hillFar: '#8FC2A4', mountain: '#A9B8D6',
+  stone: '#C4BBB0', stoneDk: '#978D84', path: '#E8D3A6', earth: '#C9A578',
+  flowerY: '#FFD65C', flowerP: '#F59BC0', water: '#8FD0E0', sand: '#F2DDB0', lilac: '#C9B3E6', white: '#FFFCF4',
 };
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -58,8 +69,8 @@ const shakeXY = (t, amt) => { const f = Math.floor(t * 24); return [(hash(f * 1.
 // after landing, a hat that jiggles, a stack that sways, a tail that drags. k = damping, w = wobble speed (rad/s).
 const spring = (t, t0, k = 6, w = 18) => t < t0 ? 0 : Math.exp(-k * (t - t0)) * Math.sin(w * (t - t0));
 const ring = (t, evs, k = 6, w = 18) => evs.reduce((s, e) => s + spring(t, e, k, w), 0);    // one kick per event time
-// Hold each drawing for two frames (12 drawings a second), like hand-drawn animation "on twos". Wrap a shot's t in it.
-const onTwos = t => Math.floor(t * 12 + 1e-6) / 12;
+// Hold each drawing for two frames, like hand-drawn animation "on twos". Wrap a shot's t in it.
+const onTwos = t => { const r = (PROJECT.fps || 30) / 2; return Math.floor(t * r + 1e-6) / r; };
 // Point on a thrown or jumping arc from p0 to p1, peaking h px above the straight line; k = 0..1 along the flight.
 const arcPt = (p0, p1, h, k) => [lerp(p0[0], p1[0], k), lerp(p0[1], p1[1], k) - h * 4 * k * (1 - k)];
 // A hop that takes off at t0 and lands at t1, h body units high: crouch (anticipation), stretch on takeoff,
@@ -276,7 +287,7 @@ async function setup() {
   createCanvas(W, H, WEBGL); pixelDensity(1); noLoop();
   brush.scaleBrushes(5); defineBrushes();
   paperG = makePaper(); grainC = makeGrain(); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
-  outC = document.getElementById('out'); outX = outC.getContext('2d');
+  outC = document.getElementById('out'); outC.width = W; outC.height = H; outC.style.aspectRatio = `${W} / ${H}`; outX = outC.getContext('2d');
   await document.fonts.load('100px "Permanent Marker"');
   window.ready = true;
   if (!location.search.includes('render')) devUI();
@@ -318,7 +329,7 @@ window.renderSheet = async (times, cols = 3, w = 640, crop = null, at = null) =>
 window.gpuInfo = () => { const gl = drawingContext, e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); };
 
 function devUI() {
-  const s = document.getElementById('scrub'), lab = document.getElementById('tt'); s.max = window.LOOP ? window.LOOP.len : DUR;
+  const s = document.getElementById('scrub'), lab = document.getElementById('tt'); s.max = window.LOOP ? window.LOOP.len : DUR; s.step = 1 / (PROJECT.fps || 30);
   let busy = false, want = null;
   const go = async () => { if (busy) return; busy = true; while (want != null) { const t = want; want = null; const t0 = performance.now(); await window.renderAt(t); lab.textContent = `${t.toFixed(2)}s  ·  ${Math.round(performance.now() - t0)} ms/frame`; } busy = false; };
   s.addEventListener('input', () => { want = +s.value; go(); });

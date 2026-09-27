@@ -1,14 +1,16 @@
-# Animating Clawd
+# Animating Cara
 
-Read this whole file before you draw anything. It covers how to make a short, hand-painted cartoon, starring Clawd or any character you design: the rules and animation principles that make it look good, the workflow that catches mistakes, and the full reference for the character and the engine.
+> **This fork:** the character is Cara the Capybara, for a children's series. Read [CARA_STYLE_GUIDE.md](CARA_STYLE_GUIDE.md) as well; it overrides this file where they disagree. Video is 30 fps (not 24), so count 30 frames to a second.
+
+Read this whole file before you draw anything. It covers how to make a short, hand-painted cartoon, starring Cara or any character you design: the rules and animation principles that make it look good, the workflow that catches mistakes, and the full reference for the character and the engine.
 
 The person prompting you decides **what** the video is about. This guide decides **how** it's made. If they ask for something the rules below forbid (a caption, a 3D spin), do what they ask.
 
-**No design here is final.** Clawd, the emotions, the props and the helpers are a starting point, not a limit. Change any of them, Clawd's own design included, and add whatever new characters, props or emotions the idea needs. Paint new things with the same tools and rules, so they belong with the rest.
+**No design here is final.** Cara, the emotions, the props and the helpers are a starting point, not a limit. Change any of them, Cara's own design included, and add whatever new characters, props or emotions the idea needs. Paint new things with the same tools and rules, so they belong with the rest.
 
 Look at the model sheets first:
-- [docs/emotions.jpg](docs/emotions.jpg): all 31 emotions.
-- [docs/views.jpg](docs/views.jpg): the five key views, the motion helpers and the hats.
+- [docs/cara_poses.jpg](docs/cara_poses.jpg): Cara's key views and every pose.
+- [docs/dewi.jpg](docs/dewi.jpg): Dewi the Welsh dragon, and the smoke puffs.
 
 ---
 
@@ -28,22 +30,22 @@ Underneath all three, the viewer has to be able to follow it. Timing (rule 4) is
 
 - **Paint everything with p5.brush through `paint()` and `inkLine()`.** Characters get flat `wash` colour plus an ink outline. Backgrounds get soft watercolour `fill` shapes, usually with no outline or a thin one. Never use plain p5 shapes (`rect`, `ellipse`, `fill()`): they look like 2000s Flash.
 - **The linework boils.** `jit()` and `random()` are reseeded 12 times a second (`BOIL`), so every drawing wobbles slightly, like hand-drawn animation. That's the look; don't fight it. For anything that must stay put from frame to frame (star positions, tuft heights), use `hash(i)`. Give each separate element its own seed with `boilSeed(key)` (see Engine), or one moving thing makes everything drawn after it jitter.
-- **Everything is flat 2D. Never project 3D.** Don't rotate a box in perspective, don't use `rotateY` or WEBGL 3D and don't fake depth with math. Clawd turns through **drawn key views** (front → 3/4 → side → back 3/4 → back), exactly like a cartoon model sheet: see `turn()` and `spinView()`. Depth comes from overlap, scale and colour (farther = smaller, bluer, paler), never from a projection.
+- **Everything is flat 2D. Never project 3D.** Don't rotate a box in perspective, don't use `rotateY` or WEBGL 3D and don't fake depth with math. Cara turns through **drawn key views** (front → 3/4 → side), exactly like a cartoon model sheet: see `caraTurn()` and `caraView()`. Depth comes from overlap, scale and colour (farther = smaller, bluer, paler), never from a projection.
 - **Light is the one exception.** p5.brush mixes colour like pigment, so a yellow glow painted over blue turns green, and a thin wash over it turns grey. Use `glow()` for anything that shines: it adds real light, under the paper grain.
-- **Soft palette, no pure black or white.** Use `PAL.ink` for black and `PAL.cream` or `PAL.paper` for white. Keep colours soft and harmonious, and keep Clawd clearly readable against the background.
+- **Soft palette, no pure black or white.** Use `PAL.ink` for black and `PAL.cream` or `PAL.paper` for white. Keep colours soft and harmonious, and keep Cara clearly readable against the background.
 
 ### 2. No text
 
 - **Show it, don't write it.** Models overuse text. No captions, no titles, no labels on objects, no signs, no speech bubbles with words, no words on screens, no "ZZZ" typed in a font.
-- **Clawd's reactions are painted marks, never letters**: `!`, `?`, zzz, sweat, hearts, a bulb, a rain cloud. Use the emotes (see the reference).
-- **A sign that repeats the story is the classic failure.** If Clawd holds a sign saying "I'm lost", the shot has failed. Show Clawd being lost: looking left, then right, the map upside down, a sweat drop.
+- **Cara's reactions are painted marks, never letters**: `!`, `?`, zzz, sweat, hearts, a bulb, a rain cloud. Use the emotes (see the reference).
+- **A sign that repeats the story is the classic failure.** If Cara holds a sign saying "I'm lost", the shot has failed. Show Cara being lost: looking left, then right, the map upside down, a sweat drop.
 - If the prompt truly needs a word (a name, a shop sign that is the joke), use `letter()`. Paint it into the scene, keep it to one or two words and use it once.
 
 ### 3. Something happens in every scene
 
-- **Every shot needs an event:** something changes between its first frame and its last. Clawd wants something, finds something, tries, fails, reacts or gets it. "Clawd stands in a meadow being cute" is not a shot.
+- **Every shot needs an event:** something changes between its first frame and its last. Cara wants something, finds something, tries, fails, reacts or gets it. "Cara stands in a meadow being cute" is not a shot.
 - **One focal action at a time.** Stage it with a clear silhouette and nothing competing for attention, so it reads at a glance.
-- **Cause, then reaction.** When something happens, Clawd reacts to it: a take, an emotion change, a turn toward it. The reaction is often the funniest part, so give it time.
+- **Cause, then reaction.** When something happens, Cara reacts to it: a take, an emotion change, a turn toward it. The reaction is often the funniest part, so give it time.
 - **Pay it off.** Whatever you set up in a shot (a door, a sandwich, a strange noise) gets resolved on screen, in that shot or a later one.
 
 ### 4. Timing: model the viewer
@@ -62,10 +64,10 @@ For a worked example, see how the demo times its ending, at the end of this guid
 
 ### 5. Alive
 
-- **Nothing is ever still.** Every emotion has its own idle motion (`feel()`), cameras drift or push, grass sways, stars twinkle and the linework boils. A frozen frame reads as a bug.
-- **Faces act, they never snap.** Change moods with `emotions()`. It does anticipation, a squint, a take and overshoot around every change. Never swap `eyes`/`mouth` by hand between two frames.
+- **Nothing is ever still.** Every emotion has its own idle motion (`caraPose()`), cameras drift or push, grass sways, stars twinkle and the linework boils. A frozen frame reads as a bug.
+- **Faces act, they never snap.** Change moods with `caraActs()`. It does anticipation, a squint, a take and overshoot around every change. Never swap `eyes`/`mouth` by hand between two frames.
 - **Move like a cartoon, not a machine.** Every move follows the animation principles in the next section.
-- **Clawd is big.** In a medium shot, `u` is about 20–28 (Clawd is 10u wide, 8u tall). In a close-up it's 40–70. Tiny Clawds (u < 12) are for wide establishing shots only, and never for the whole video.
+- **Cara is big.** In a medium shot, `u` is about 26–36 (Cara is about 6u wide and 12u tall). In a close-up it's 45–70. A small Cara (u < 20) is for wide establishing shots only, and never for the whole video.
 - **Everything moves on a beat.** `PROJECT.bpm` drives every idle, bounce and dance, so the whole film shares one pulse. Put the hits on beats (`pulse()`, `beatN()`), even with no music.
 
 ### 6. Transitions always
@@ -80,15 +82,15 @@ For a worked example, see how the demo times its ending, at the end of this guid
   - a camera move that carries through into the next shot
   - a fade or push from paper or black
 - A plain cut is fine only when it's on action or a deliberate smash cut.
-- **Changes inside a shot are transitions too:** emotions go through `emotions()` and turns go through `turn()`. Props arrive and leave on arcs, never popping in.
+- **Changes inside a shot are transitions too:** emotions go through `caraActs()` and turns go through `caraTurn()`. Props arrive and leave on arcs, never popping in.
 
 ### 7. One piece: a vision before any code
 
 - **Storyboard first**, in writing, before you write any scene code (the workflow below has the format). If you're working with a person, show them the storyboard and let them react before you build.
-- **One world.** Pick a palette and a setting that carries through, with a colour arc across the video (e.g. cold night → warm dawn as Clawd's mood lifts).
-- **One thread.** The story has a beginning, a middle and an end, and Clawd's emotional arc follows it. Plan the emotion keys across the whole video, not per shot.
+- **One world.** Pick a palette and a setting that carries through, with a colour arc across the video (e.g. cold night → warm dawn as Cara's mood lifts).
+- **One thread.** The story has a beginning, a middle and an end, and Cara's emotional arc follows it. Plan the emotion keys across the whole video, not per shot.
 - **Rhyme the ending with the opening:** the same place, pose or motif, changed. It makes the film feel whole.
-- **Link scenes:** motion continues across cuts, and screen direction stays consistent (if Clawd travels right, keep travelling right). Props and characters carry over.
+- **Link scenes:** motion continues across cuts, and screen direction stays consistent (if Cara travels right, keep travelling right). Props and characters carry over.
 
 ---
 
@@ -96,7 +98,7 @@ For a worked example, see how the demo times its ending, at the end of this guid
 
 These are the classic principles of character animation, as they apply here. Most of them fix one problem: motion written as code comes out mechanical, because code moves every part at once, on the same curve, by the same amount.
 
-- **Anticipation.** Before a big move, make a small move the opposite way: a crouch before a jump, a wind-up before a throw, a squint before a take. It tells the viewer something is coming and where to look. `jump()` and `emotions()` build it in.
+- **Anticipation.** Before a big move, make a small move the opposite way: a crouch before a jump, a wind-up before a throw, a squint before a take. It tells the viewer something is coming and where to look. `jump()` and `caraActs()` build it in.
 - **Squash and stretch.** Bodies squash on impact and stretch when they move fast, keeping their volume (`sq`).
 - **Slow in, slow out.** Almost nothing moves at a constant speed. Things ease out of one pose and into the next. A plain `lerp` over time looks mechanical, so run its progress through an easing (`ease`, `easeIn`, `easeOut`, `backOut`).
 - **Weight.** How something starts and stops says what it weighs. Heavy things take longer to get going and to stop, and land with little bounce. Light things snap into motion, bounce and flutter to rest.
@@ -117,12 +119,12 @@ These are the classic principles of character animation, as they apply here. Mos
 Write `STORYBOARD.md` before any scene code:
 
 ```
-Logline: one sentence. Clawd wants ___, but ___, so ___.
+Logline: one sentence. Cara wants ___, but ___, so ___.
 World: setting, a small palette, light, how the colour changes across the video.
 Motif: the thing that recurs and pays off.
-Clawd's arc: the emotion keys across the whole video.
+Cara's arc: the emotion keys across the whole video.
 Shots:
-  A  start–end  [transition in: ___]  what's seen · the EVENT · Clawd's reaction · camera
+  A  start–end  [transition in: ___]  what's seen · the EVENT · Cara's reaction · camera
      reads:  start–end  the first thing the viewer must understand
              start–end  the next one (where is the viewer's eye when it starts?)
              ...
@@ -143,7 +145,7 @@ Check the storyboard against the rules:
 ### 2. Build
 
 - Set `duration` (and `bpm`) in [src/config.js](src/config.js).
-- Put your scene in a new file (e.g. `src/scenes/my_video.js`), wrapped in an IIFE, and end it with `shots([...])`. In [studio.html](studio.html), **replace** the `demo.js` script tag with yours.
+- Put your scene in a new file (e.g. `src/scenes/my_video.js`), wrapped in an IIFE, and end it with `shots([...])`. In [studio.html](studio.html), **replace** the scene script tag with yours.
 - Build and check one shot at a time, in order.
 - Within a shot, block the key poses first and check them as stills (`--sheet` at the key times). Add the motion between them once they read.
 
@@ -154,10 +156,9 @@ Check the storyboard against the rules:
     camBegin(960 + 20 * Math.sin(lt * .6), 540, 1 + .02 * lt);   // slow drift and push: the camera is never dead
     paint(rectPts(-200, -200, W + 400, H + 400), { wash: PAL.sky, ink: null });           // background
     paint(ellPts(960, 1150, 1400, 380, 40, 2), { wash: PAL.sap, ink: PAL.ink, sw: 1 });   // ground
-    const mood = emotions(lt, [[0, 'bored'], [1.2, 'surprised'], [1.7, 'excited']]);      // acted changes
-    const hop = jump(lt, 2.2, 2.7, 3);                                                    // add poses that share fields
-    clawd(960, 860, 26, { ...mood, dy: mood.dy + hop.dy, sq: mood.sq + hop.sq });
-    const at = toScreen(960, 860 - 4 * 26);          // Clawd's screen position, for the iris
+    const mood = caraActs(lt, [[0, 'idle'], [1.2, 'surprised'], [2.0, 'happy']]);         // acted changes
+    cara(960, 860, 26, mixPose(mood, caraHop(lt, 2.4, 2.9, 2.4)));                        // mixPose adds dy/sq together
+    const at = toScreen(960, 860 - 6 * 26);          // Cara's screen position, for the iris
     camEnd();
     if (lt < .45) iris(...at, lerp(0, 1500, easeIn(lt / .45)));            // transition in
     if (lt > dur - .3) brushWipe((lt - (dur - .3)) / .6);                 // transition out (next shot finishes it)
@@ -184,11 +185,11 @@ node render.mjs --strip=2.1:2.6 --crop-at=960,700,500,400 --out=out/check/feet.j
 
 Open each image and actually look at it. Check:
 
-- **Read:** is the event of each shot clear from its sheet alone? Is Clawd big enough, and does Clawd separate from the background?
+- **Read:** is the event of each shot clear from its sheet alone? Is Cara big enough, and does Cara separate from the background?
 - **Timing.** You can't judge timing from single frames, so read it like a viewer:
   - Render the shot as a sheet at a fixed step (every 0.1–0.15 s) and read it in order.
   - At each frame ask: where is the viewer looking right now, and do they understand it yet?
-  - Count the frames each read gets (24 frames = 1 s). A read that flashes by in a few frames, or shares its frames with another read, will be missed.
+  - Count the frames each read gets (30 frames = 1 s). A read that flashes by in a few frames, or shares its frames with another read, will be missed.
   - After each important moment, is there time to take it in before the next thing starts?
 - **Motion:** in strips, does every move have anticipation and follow-through? Are there any pops, jumps or snaps between frames? Do the parts move at different times, or all at once? Is anything moving at a constant speed, or mirrored left and right? Are the poses pushed far enough to read?
 - **Boil:** in a strip, each pair of frames that share a boil drawing should match except where something moves. Anything still that changes every frame needs its own `boilSeed()`.
@@ -215,13 +216,15 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
 
 | file | what's in it |
 |---|---|
-| `src/config.js` | `PROJECT = { duration, bpm, offset, audio? }` |
+| `src/config.js` | `PROJECT = { name, duration, fps, bpm, offset, audio }` |
 | `src/core.js` | canvas, palette, timing and motion helpers, `paint()`, camera, full-frame effects, `glow()`, lettering, paper, render hooks |
-| `src/clawd.js` | Clawd: views, emotions, eyes, mouths, hats, emotes, moves |
+| `src/cara.js` | Cara: views, poses, acted mood changes, walk, hop, talk / lip-sync |
+| `src/dragon.js` | Dewi the Welsh dragon, and `puff()` smoke |
+| `src/emotes.js` | painted reaction marks shared by every character |
 | `src/timeline.js` | `shots()`, `LOOPS`, `brushWipe()` |
-| `src/sheets.js` | the model sheets as loops (`?loop=emotions`, `?loop=views`) |
-| `src/scenes/demo.js` | an 11-second example. **Don't copy it** (see the end of this guide) |
-| `studio.html` | open it in Chrome to scrub the video (`?t=2.5` jumps to a time, `?loop=emotions` shows a loop) |
+| `src/sheets.js` | the model sheets as loops (`?loop=cara`, `?loop=dragon`) |
+| `src/scenes/cara-wales-test.js` | the 20-second Wales test scene |
+| `studio.html` | open it in Chrome to scrub the video (`?t=2.5` jumps to a time, `?loop=cara` shows a loop, `&vertical` for Shorts) |
 | `render.mjs` | headless renderer: sheets, strips, crops, stills, PNG loops, MP4 |
 
 ### Frames are pure functions of time
@@ -231,9 +234,9 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
 - **Seed each element with `boilSeed(key)`.** Each boil drawing holds for two frames, so anything that isn't moving must draw the same in both. But a moving thing uses a different amount of randomness each frame, which shifts the stream for everything drawn after it, and all of that re-boils every frame and looks jittery.
   - `boilSeed(key)` restarts the stream from the boil frame and a key that stays the same every frame (any string or number, unique within the frame).
   - Call it before each separate element: each background layer, prop and effect.
-  - `clawd()` seeds itself and each of its parts, then reseeds when it's done, so nothing drawn after it depends on its pose. Its key is its call order; set `boilKey` if characters come and go mid-shot.
+  - `cara()` and `dragon()` seed themselves and each of their parts, then reseed when they're done, so nothing drawn after them depends on their pose. Set `boilKey` if characters come and go mid-shot.
 - **Each shot paints the whole frame,** background included. The paper texture is under everything and the grain is multiplied over the top, so leaving paper showing is a valid look.
-- **Canvas:** 1920×1080, origin top-left, y down.
+- **Canvas:** 1920×1080, origin top-left, y down; or 1080×1920 with `--vertical` (`VERT` is true, and `fmt(landscape, vertical)` picks a value per format).
 - `LOOPS.name = t => {...}; LOOPS.name.len = 4;` makes a standalone loop (tests, GIFs, sheets), rendered with `--loop=name`.
 
 ### Painting
@@ -306,129 +309,43 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
 
 ---
 
-## Clawd
+## Characters
 
-Clawd is the Claude Code mascot: a terracotta block (`PAL.clay`), 10 units wide and 6 tall, with four stubby legs, two little arm nubs and two tall slit eyes. There's no mouth at rest. It's drawn in flat wash with an ink outline and boils like everything else. That's the default design, not a rule: change it if the idea needs it. Within one video, though, keep every character on model, with the same shape and features in every shot.
+This fork's cast is **Cara the Capybara** ([src/cara.js](src/cara.js)) and **Dewi the Welsh dragon**
+([src/dragon.js](src/dragon.js)). Their full reference (sizes, views, poses, acted mood changes, lip-sync, hooks and
+palette) is in [CARA_STYLE_GUIDE.md](CARA_STYLE_GUIDE.md), which also overrides this guide wherever the two disagree
+(pacing for young children, no flashes, friendly emotes only). The upstream kit's Clawd character was removed; its
+painted emotes live on in [src/emotes.js](src/emotes.js):
 
-```js
-clawd(x, y, u, options)   // (x, y) = ground point between the feet; u = size unit
-```
+- `emote(kind, x, y, s, k, age)` draws one anywhere; characters take `emote`, `emoteK` (0..1 pop) and `emoteAge`.
+- Kinds: `!` `?` `!!` `!?` zzz sweat spark heart hearts anger steam bulb dots scribble music swirl stars cloud.
 
-**Sizes:** Clawd is 10u × 8u (legs included).
-
-| shot | u | on screen |
-|---|---|---|
-| wide | 10–16 | small in the landscape |
-| medium | 20–28 | the usual acting size |
-| close-up | 40–70 | face acting |
-| extreme close-up | 90+ | camera pushed in on the eyes |
-
-### Options
-
-| group | options |
-|---|---|
-| pose | `dx`, `dy` (in u; −dy = up), `sq` (squash; negative stretches), `rot` (pivots at the feet), `flip`, `sx`, `sy`, `aL`, `aR` (arm angle: 0 = straight out, + = up, − = down; ±1.5 is vertical), `walk` (leg phase), `noLegs`, `noShadow` |
-| view | `view`: front, q, side, qback, back. `smear` 0..1 + `smearDir` ±1 (0 = both sides) for fast moves |
-| face | `eyes`, `mouth`, `lookX`/`lookY` (−1..1), `squint` 0..1, `blush` 0..1, `gloom` 0..1, `lid` 0..1, `seed` (blink timing) |
-| colour | `tint` (pale, flush, blue, rosy, green, gold, or any hex) + `tintK`, or `col`/`dk`/`lt` directly |
-| extras | `hat`, `emote` + `emoteK` (0..1 pop) + `emoteAge`, `draw(u, sw)`, `armL(u, sw)`, `armR(u, sw)` |
-| boil | `boilKey`: a stable id for its boil seeds (default: call order) |
-
-Options compose by spreading: `clawd(x, y, u, { ...feel('happy', t), ...turn(t, 1, 1.15, 0, .25), hat: 'party' })`. Later spreads win, so put the emotion first and the pose after it. If both an emotion and a pose move the same field (`dy`, `sq`), add them together rather than letting one silently replace the other.
-
-### Views and turns
-
-These are drawn key views. Every view faces screen-right; add `flip: true` to face left.
-
-| view | what you see |
-|---|---|
-| `front` | the face, both arms, four legs |
-| `q` | 3/4: the face shifted toward the heading, the side face as a darker strip behind it |
-| `side` | profile: one eye near the leading edge, one arm |
-| `qback` | 3/4 from behind: no face |
-| `back` | no face |
-
-- **Turn with `turn(t, t0, t1, a0, a1)`.** Headings are in turns: 0 = front, .25 = facing right, .5 = back, −.25 = facing left. It steps through the key views over 0.12–0.25 s with smears, like a drawn turn. For a single heading, use `spinView(a)`.
-- **Walks across the screen** read best in `side` view with `walk` driving the legs. `stroll()` gives `q`; override it with `view: 'side'` for a trot.
-- **Facing right, `aL` is the near arm** (drawn in front of the body), and the far arm is behind and darker.
-
-### Emotions
-
-31 emotions. Each is a face, a colour and a way of moving, all locked to the beat. `feel(name, t, over)` returns all of it at time t:
+In quick reference:
 
 ```js
-clawd(x, y, u, feel('happy', t));                                   // one emotion, alive
-clawd(x, y, u, feel('sad', t, { view: 'q', lookX: -1 }));             // with overrides
-clawd(x, y, u, emotions(t, [[0, 'sleepy'], [1.9, 'surprised', { lookX: .8 }], [2.5, 'idea']]));   // acted changes
+cara(x, y, u, mixPose(caraActs(t, [[0, 'idle'], [2, 'surprised'], [2.8, 'happy']]), caraHop(t, 3, 3.5), talk(t, LINES)));
+const w = caraWalk(t, 1, 4, -200, 700, u); cara(w.x, GROUND, u, { ...caraPose('happy', t), ...w });
+dragon(x, y, u, { turn: -.6, lookX: -1, eyes: 'happy', mouth: 'grin', aL: 1.2 + .4 * Math.sin(t * 9) });
 ```
-
-| family | emotions |
-|---|---|
-| joy | happy, excited, laugh, love, proud, starstruck, playful, hopeful, relieved |
-| sly | smug, cool, mischief, suspicious |
-| low | sad, cry, bored, sleepy, ko |
-| hot | angry, furious (the lunchbox lid opens), determined, disgusted |
-| alarm | scared, nervous, surprised, confused, dizzy |
-| mind | neutral, thinking, idea, shy |
-
-- **`emotions(t, keys)`** is how moods change in a shot. Around each key it squints and squashes just before the change (anticipation), swaps the face under the squint, and fires a take sized to the new emotion. The body then settles into the new motion with overshoot, colour cross-fades and the new emote pops in.
-  - `emotions(t, keys, { take: .5 })` scales every take.
-  - The third element of a key overrides fields for that stretch (e.g. `{ lookX: .8, emote: 'music' }`).
-- To make a new emotion, add an entry to `EMO` in clawd.js. It needs eyes, mouth, optional tint/blush/gloom/lid/emote, `take` (reaction size) and `body(t)` (its idle motion, locked to the beat through `_b(t)`).
-
-### Parts
-
-- **Eyes:** normal, look, wide, happy, closed, sleepy, wink, narrow, angry, determined, sad, teary, cry, squeeze, shine, scared, blank, spark, red, heart, x, swirl, dot, shades.
-  - A pair gives mismatched eyes, e.g. `['narrow', 'wide']`.
-  - `lookX`/`lookY` aim the pupils, and `squint` closes the eyes from any shape.
-- **Mouths:** o, O, smile, grin, flat, wobble, cat, frown, smirk, laugh, open, wail, teeth, tongue, pout, yawn. Use `null` for none (Clawd's resting face).
-- **Lunchbox lid:** `lid` 0..1 hinges the top of the body open, with teeth pointing into the mouth. It's for fury, chomping and shouting, in the front view only.
-- **Hats:** party, hard, crown, halo, wizard, hood, top, fedora, band, sweatband, beanie, bow, flower, headphones, cat (ears and whiskers). Face pieces: masq, mask, bowtie.
-- **Emotes** are painted marks that pop in by the head: `!` `?` `!!` `!?` zzz, sweat, spark, heart, hearts, anger, steam, bulb, dots, scribble, music, swirl, stars, cloud.
-  - `emoteK` is the 0..1 pop and `emoteAge` drives the looping ones; `emotions()` sets both.
-  - `emote(kind, x, y, s, k, age)` draws one anywhere, for example over a prop.
-- **Body colour:**
-  - `tint` shifts it with the mood: pale (fear), flush (anger), blue (sadness), rosy (love), green (disgust), gold (pride).
-  - `gloom` adds a dark forehead with hanging lines, and `blush` adds cheeks (hatched when above .6).
-
-### Hooks: props and accessories
-
-- **`draw(u, sw)`** paints in body-local space, on top of everything else on the body (face, hat, near arm). It squashes, flips and rotates with Clawd. Front-view coordinates:
-  - the body spans x −5u..5u and y −8u..−2u
-  - the eyes are at (±2.5u, −6u)
-  - the mouth is near (0, −4.3u)
-- **`armL(u, sw)` / `armR(u, sw)`** are called at the arm tip, in arm space (+x runs outward along the arm), so a held prop just draws around (0, 0) and follows the arm automatically:
-
-```js
-clawd(x, y, 24, { ...feel('proud', t), aR: 1.2, armR: (u, sw) => paint(starPts(u * .8, 0, u * 1.4, .5, 5), { wash: '#FFE27A', sw }) });
-```
-
-- Anything the arms can't carry, like a big object overhead, is drawn separately at a point computed from the same pose. The demo's star does this. Make sure it touches: check it with a crop.
-
-### Dances
-
-`move(style, t, seed)` returns beat-locked pose offsets. The styles are bounce, hop, roof (arms up), sway, spin (a drawn spin through the key views once a bar), wave, walk, run, idle, stomp and shimmy. `mix` changes style every two bars. `dancer(x, y, u, style, t, extra)` is `clawd` + `move`. You can combine a dance with a face: `{ ...move('bounce', t), eyes: 'happy', mouth: 'grin' }`.
-
----
 
 ## Music (optional)
 
 The kit doesn't need music, but it's built for it:
 
 1. Set `bpm` to the song's tempo in [src/config.js](src/config.js), and set `offset` to the time of its first downbeat in seconds. Every idle, dance and `pulse()` then locks to the song.
-2. Put the audio in `assets/` and set `PROJECT.audio` (or pass `--audio=`). `--clip` and `--encode` mux it in.
+2. Put the audio in `assets/audio/` and set `PROJECT.audio` (a path, or a list of `{ src, at, gain }` tracks), or pass `--audio=`. `--clip` and `--encode` mix it in and pad it with silence, so a short voiceover never cuts the video.
 3. Land hits, cuts and takes on beats (`beatN`, `pulse`). Cut on bar lines for big changes, and give each musical phrase its own visual.
 4. **Lyrics are not text.** Don't put words on screen. Act the meaning of a line instead.
 
 ## Common failures
 
-These are the things that make a Clawd video look generated. Check your storyboard and sheets against them:
+These are the things that make a Cara video look generated. Check your storyboard and sheets against them:
 
 - signs, captions, labels or speech bubbles with words
-- Clawd standing still and smiling while nothing happens
+- Cara standing still and smiling while nothing happens
 - everything moving at one brisk speed, with events stacked on top of each other and no holds
 - moments that are over before the viewer understands them
-- a tiny Clawd in a big empty landscape for the whole video
+- a tiny Cara in a big empty landscape for the whole video
 - faces that snap from one expression to another
 - mechanical motion: linear moves, every part moving at once, both arms or several characters in sync
 - timid poses and takes that barely read
@@ -440,22 +357,9 @@ These are the things that make a Clawd video look generated. Check your storyboa
 - props floating near a hand instead of touching it
 - every shot a different world with nothing linking them
 
-## About the demo
+## A worked lesson on timing
 
-[src/scenes/demo.js](src/scenes/demo.js) ("The fallen star") exists to show the kit working: an acted emotion timeline, a drawn turn, a trot, a pickup, a throw on an arc, `glow`, a brush wipe and an iris in and out. **It's one idea, not a template.** Don't reuse its story, night sky, hills, star or shot structure. Start from the prompt and your own storyboard, and replace its script tag in `studio.html` with yours.
-
-### Worked example: how the demo times its ending
-
-This shows rule 4 applied to one shot of one video. The reads, the numbers and the way it ends are specific to this story; yours will be different. Read it for the reasoning, not the numbers. It's the demo's last shot, from the throw on, in video time:
-
-| time | read | why it's timed this way |
-|---|---|---|
-| 6.95–7.1 | wind-up and throw | fast motion; it reads because the wind-up anticipates it |
-| 7.1–7.9 | the star flies home | long enough for the eye to follow it from Clawd to the top of the frame; the camera eases back to give it sky |
-| 7.9–8.35 | it arrives: a flare, a sparkle, the sky twinkles | the payoff. Clawd only watches, so nothing competes with it |
-| 8.35–8.95 | Clawd falls in love | the reaction starts only after the viewer has seen the cause |
-| 8.95–9.4 | Clawd waves goodbye | a new action, on its own |
-| 9.4–9.8 | the star twinkles back | the answer to the wave |
-| 9.8–11.0 | iris to Clawd, hold, shut | the last read gets time to land before the video ends |
-
-The first version packed all of this into about 1.3 s, and nobody could tell what had happened.
+The upstream demo's first version packed a throw, a flight, an arrival, a reaction and a goodbye into about 1.3 s, and
+nobody could tell what had happened. Spread over 4 s, one read at a time, it worked. The Wales test scene in this fork
+([STORYBOARD.md](STORYBOARD.md)) is timed the same way: the dragon's reveal is three separate clues, about 1 s each,
+before he appears, and Cara reacts only after the two-shot has settled.

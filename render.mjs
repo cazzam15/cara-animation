@@ -13,19 +13,26 @@
 //     node render.mjs --encode --out=out/video.mp4                                           out/frames → MP4
 //   Standalone loops (LOOPS in the page): add --loop=<name> to any of the above (times are then loop times), or
 //     node render.mjs --loop=emotions --png --out=out/loop_emotions                          one cycle as PNGs (for GIFs)
-//   Music: --audio=assets/song.mp3 (or PROJECT.audio) is muxed into --clip and --encode. Other flags: --fps=24,
-//   --chrome=<path to Chrome/Chromium>.
+//   Shorts: add --vertical to any of the above to render the 1080×1920 version (frames go to out/frames/<name>-vertical).
+//   Audio: --audio=assets/audio/vo.mp3 (or PROJECT.audio, which may list several tracks) is mixed into --clip and --encode.
+//   Other flags: --fps=30 (default: PROJECT.fps), --fresh (clear old frames first), --chrome=<path to Chrome/Chromium>.
 import puppeteer from 'puppeteer-core';
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
-const CHROMES = [args.chrome, process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser',
-  ...playwrightChromes()];
+// PROJECT from src/config.js, so the name, fps and audio are known before the page opens
+const CFG = new Function(readFileSync('src/config.js', 'utf8') + '\nreturn PROJECT;')();
+// Chrome/Chromium: --chrome, then CHROME_PATH, then the usual places for this OS (Arch's chromium package is /usr/bin/chromium)
+const OS_CHROMES = {
+  linux: ['/usr/bin/chromium', '/usr/bin/google-chrome-stable', '/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/snap/bin/chromium', ...playwrightChromes()],
+  darwin: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium'],
+  win32: ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'],
+};
+const CHROMES = [args.chrome, process.env.CHROME_PATH, ...(OS_CHROMES[process.platform] || OS_CHROMES.linux)];
 // Chromium builds Playwright downloaded (~/.cache/ms-playwright/chromium-NNNN), newest first
 function playwrightChromes() {
   const dir = `${homedir()}/.cache/ms-playwright`;
@@ -35,7 +42,19 @@ function playwrightChromes() {
 }
 const CHROME = CHROMES.find(p => p && existsSync(p));
 if (!CHROME) { console.error('Chrome not found: pass --chrome=<path> or set CHROME_PATH'); process.exit(1); }
-const fps = +(args.fps || 24), FRAMES_DIR = 'out/frames';
+const fps = +(args.fps || CFG.fps || 30), VERTICAL = !!args.vertical, NAME = CFG.name || 'video';
+const FRAMES_DIR = `out/frames/${NAME}${VERTICAL ? '-vertical' : ''}`, DEFAULT_OUT = `out/${NAME}${VERTICAL ? '-vertical' : ''}.mp4`;
+if (args.fresh && existsSync(FRAMES_DIR)) rmSync(FRAMES_DIR, { recursive: true });
+// Audio: one or more tracks, each delayed to its start time (at) and scaled (gain), mixed, then padded with silence so
+// the video is never cut short by a voiceover that ends early. from = the video time the output starts at; len = length.
+function audioArgs(from, len) {
+  const list = [].concat(args.audio ? [args.audio] : CFG.audio || []).map(a => typeof a === 'string' ? { src: a } : a);
+  if (!list.length) return [];
+  for (const a of list) if (!existsSync(a.src)) { console.error(`audio not found: ${a.src}`); process.exit(1); }
+  const chains = list.map((a, i) => `[${i + 1}:a]adelay=${Math.round((a.at || 0) * 1000)}:all=1,volume=${a.gain ?? 1}[a${i}]`);
+  const mix = `${list.map((_, i) => `[a${i}]`).join('')}amix=inputs=${list.length}:normalize=0:duration=longest,atrim=start=${from},asetpts=PTS-STARTPTS,apad[aout]`;
+  return { inputs: list.flatMap(a => ['-i', a.src]), out: ['-filter_complex', [...chains, mix].join(';'), '-map', '0:v', '-map', '[aout]', '-c:a', 'aac', '-b:a', '192k', '-t', String(len)] };
+}
 const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { stdio: 'inherit' }); p.on('close', c => c ? bad(new Error(cmd + ' exited ' + c)) : ok()); });
 const times = s => String(s).split(',').map(Number);
 const span = s => String(s).split(':').map(Number);
@@ -43,11 +62,12 @@ const span = s => String(s).split(':').map(Number);
 const fields = s => { const out = []; let d = 0, cur = ''; for (const ch of String(s)) { if (ch === ',' && !d) { out.push(cur); cur = ''; continue; } d += ch === '(' ? 1 : ch === ')' ? -1 : 0; cur += ch; } out.push(cur); return out.map(v => isNaN(+v) ? v : +v); };
 
 if (args.encode) {
-  const out = args.out || 'out/video.mp4', n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length, audio = args.audio;
-  console.log(`encoding ${n} frames → ${out}${audio ? ' with ' + audio : ''}`);
+  const out = args.out || DEFAULT_OUT, n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length, au = audioArgs(0, n / fps);
+  console.log(`encoding ${n} frames from ${FRAMES_DIR} → ${out}${au.inputs ? ' with audio' : ' (silent)'}`);
+  mkdirSync(dirname(out), { recursive: true });
   await run('ffmpeg', ['-y', '-loglevel', 'error', '-stats', '-framerate', String(fps), '-i', `${FRAMES_DIR}/f%05d.jpg`,
-    ...(audio ? ['-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
+    ...(au.inputs || []), ...(au.out || []),
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-r', String(fps), '-movflags', '+faststart', out]);
   console.log('wrote ' + out);
   process.exit(0);
 }
@@ -64,13 +84,13 @@ const gpu = args['soft-gl'] ? ['--use-angle=swiftshader', '--enable-unsafe-swift
 const sandbox = process.platform === 'linux' ? ['--no-sandbox'] : [];
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: true, protocolTimeout: 0,
-  args: [...sandbox, '--allow-file-access-from-files', '--ignore-gpu-blocklist', ...gpu, '--enable-gpu-rasterization', '--window-size=1920,1080', '--disable-renderer-backgrounding', '--disable-background-timer-throttling']
+  args: [...sandbox, '--allow-file-access-from-files', '--ignore-gpu-blocklist', ...gpu, '--enable-gpu-rasterization', VERTICAL ? '--window-size=1080,1920' : '--window-size=1920,1080', '--disable-renderer-backgrounding', '--disable-background-timer-throttling']
 });
 async function openPage(tag = '') {
   const page = await browser.newPage();
   page.on('console', m => { if (['error', 'warn'].includes(m.type())) console.log(`[page${tag}]`, m.text()); });
   page.on('pageerror', e => console.log(`[page error${tag}]`, e.message));
-  await page.goto(pathToFileURL(resolve('studio.html')).href + '?render', { waitUntil: 'networkidle0' });
+  await page.goto(pathToFileURL(resolve('studio.html')).href + '?render' + (VERTICAL ? '&vertical' : ''), { waitUntil: 'networkidle0' });
   await page.waitForFunction('window.ready === true', { timeout: 60000 });
   if (args.loop) {
     const ok = await page.evaluate(name => { if (!LOOPS[name]) return false; window.LOOP = LOOPS[name]; return true; }, args.loop);
@@ -128,7 +148,7 @@ if (args.sheet || args.strip) {
       const i = todo[next++], f = `${FRAMES_DIR}/f${String(i).padStart(5, '0')}.jpg`;
       const buf = await frameOf(page, i / fps, 'image/jpeg', .94);
       writeFileSync(f + '.tmp', buf); renameSync(f + '.tmp', f);
-      if (++done % 24 === 0 || done === todo.length) {
+      if (++done % fps === 0 || done === todo.length) {
         const el = (Date.now() - start) / 1000;
         console.log(`frame ${done}/${todo.length}  ${(el / done * 1000).toFixed(0)} ms/frame effective  eta ${((todo.length - done) * el / done / 60).toFixed(1)} min`);
       }
@@ -137,17 +157,17 @@ if (args.sheet || args.strip) {
 } else if (args.clip) {
   const page = await openPage(), len = await lengthOf(page);
   const [a, b] = args.range ? span(args.range) : typeof args.clip === 'string' ? span(args.clip) : [0, len];
-  const audio = args.audio || await page.evaluate(() => PROJECT.audio || '');
-  const out = args.out || 'out/clip.mp4'; mkdirSync(dirname(out), { recursive: true });
+  const au = audioArgs(a, b - a);
+  const out = args.out || DEFAULT_OUT; mkdirSync(dirname(out), { recursive: true });
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
-    ...(audio ? ['-ss', String(a), '-t', String(b - a), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out],
+    ...(au.inputs || []), ...(au.out || []),
+    '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', String(fps), '-movflags', '+faststart', out],
     { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round((b - a) * fps), start = Date.now();
   for (let i = 0; i < n; i++) {
     const buf = await frameOf(page, a + i / fps, 'image/jpeg', .93);
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
-    if (i % 24 === 0 || i === n - 1) console.log(`frame ${i + 1}/${n}  ${((Date.now() - start) / (i + 1)).toFixed(0)} ms/frame`);
+    if (i % fps === 0 || i === n - 1) console.log(`frame ${i + 1}/${n}  ${((Date.now() - start) / (i + 1)).toFixed(0)} ms/frame`);
   }
   ff.stdin.end(); await new Promise(r => ff.on('close', r));
   console.log(`wrote ${out}`);
