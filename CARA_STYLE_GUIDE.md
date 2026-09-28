@@ -13,20 +13,23 @@ Model sheets: [docs/cara_poses.jpg](docs/cara_poses.jpg) (Cara's views and poses
 
 ## 1. Cara
 
-A friendly, upright capybara: a boxy, brick-shaped head with a big blunt muzzle and a broad flat nose, small ears peeking
-up beside her hat, a round barrel body and stubby legs. She always wears:
+A friendly, upright capybara, drawn to match her turnaround sheet: a big round head (wider than her body), a lighter
+muzzle, a large dark nose, **two white buck teeth** (they show in every mouth shape), whiskers and big brown eyes.
+Dark-brown paws and big dark-brown feet. She always wears:
 
-- **pink sunglasses**: round pink frames with a *pale, see-through* pink tint. Her eyes must always read through the
-  lenses. Children follow faces, so never make them opaque.
-- **a straw hat**: a wide brim, a pink band and a small cream flower on the right of the band.
-- **a pink swimsuit**: a one-piece with cream polka dots and two straps.
+- **big pink glasses**: rounded-square frames that span almost the whole width of her face, with *clear* lenses. Her
+  eyes must always read through them. Children follow faces, so never tint the lenses dark.
+- **a straw boater**: a wide brim, a low crown and a pink band, tilted back on her head.
+- **a tartan scarf**: red with green bars and fine cream lines, wrapped round her neck, with one fringed end hanging
+  down the front.
+- **a pink dress**: sleeveless, with a fitted bodice, a waist seam and a gathered A-line skirt to mid-shin.
 
 Keep her **on model**: the same shape, colours and accessories in every shot. She is never scary, sad for long, hurt, or
 in danger. When she's worried it's mild and resolves quickly.
 
 ### Sizes (`u`)
 
-She's about 6u wide and 12u tall with her hat.
+She's about 6.5u wide and 12.5u tall with her hat (modelled 15 units tall and drawn at `CARA_SCALE` 0.82).
 
 | shot | u | notes |
 |---|---|---|
@@ -79,7 +82,8 @@ skies, fresh greens, warm creams. **No pure black or white** (`PAL.ink`, `SOFT.w
 | `SOFT.stone` / `stoneDk` | #C4BBB0 / #978D84 | rocks, walls |
 | `SOFT.path` / `earth` / `sand` | #E8D3A6 / #C9A578 / #F2DDB0 | paths, beaches |
 | `SOFT.flowerY` / `flowerP` / `water` | #FFD65C / #F59BC0 / #8FD0E0 | accents |
-| `CARA.fur` / `suit` / `frame` / `straw` | #BF8A57 / #F27FA6 / #E9559A / #EFCD80 | Cara (keep exactly these) |
+| `CARA.fur` / `dress` / `frame` / `straw` | #B7804F / #EC4F9A / #EC4F9A / #D9B178 | Cara (keep exactly these) |
+| `CARA.scarfR` / `scarfG` / `paw` | #C63A3F / #2F7B4A / #5B3F36 | her scarf and paws |
 | `DEWI.red` / `belly` | #E4574F / #FFE3BA | Dewi |
 
 - Cara must separate from every background: warm brown and pink against cool greens and blues. Don't put her on a pink

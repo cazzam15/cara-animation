@@ -3,7 +3,8 @@
 Animated episodes of the children's YouTube series *Cara the Capybara*, painted in code with [p5.js](https://p5js.org)
 and [p5.brush](https://github.com/acamposuribe/p5.brush), rendered in headless Chromium and encoded with ffmpeg. It's a
 fork of [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) with its character (Clawd) replaced
-by Cara, a friendly capybara in pink sunglasses, a straw hat and a pink swimsuit, plus Dewi, a little Welsh dragon.
+by Cara, a friendly capybara in big pink glasses, a straw boater, a tartan scarf and a pink dress, plus Dewi, a little
+Welsh dragon.
 
 ![Cara's views and poses](docs/cara_poses.jpg)
 
@@ -79,6 +80,12 @@ The base kit was written on Windows. What changed so it works on Omarchy (Arch L
   `wash` bands, makes p5.brush lose its WebGL context, and frames come out black. The render log shows
   `CONTEXT_LOST_WEBGL`. Fine repeated detail (wall stones, grass) is drawn as `inkLine` strokes instead; see the
   performance rule in CARA_STYLE_GUIDE.md.
+- **GPU resets.** The Intel i915 driver kills any GPU job that runs longer than 640 ms (`preempt_timeout_ms`), and
+  p5.brush's watercolour fills can take longer when the desktop is also busy. The kernel log (`journalctl -k`) then
+  says `Resetting rcs0 for preemption time out`, WebGL loses its context, and the renderer now stops with an error
+  rather than writing black frames. Before a long render, raise the limit (it resets on reboot):
+  `echo 5000 | sudo tee /sys/class/drm/card*/engine/rcs0/preempt_timeout_ms`. As a fallback, `--soft-gl` renders
+  on the CPU: it always works, but it's much slower (minutes per model sheet).
 - **Frame rate.** The base kit rendered at 24 fps with 12 boils a second. At 30 fps that holds drawings unevenly
   (2, 3, 2, 3 frames), so boil is now 10 a second (every 3 frames), and fps comes from `PROJECT.fps`.
 - **Audio.** The base kit muxed one track with `-shortest`, which cut the video down to the length of a shorter

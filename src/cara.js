@@ -1,12 +1,13 @@
-// cara.js: Cara the Capybara, painted in wash and ink. A friendly, upright capybara in pink sunglasses, a straw hat and
-// a pink spotty swimsuit. `u` is her size unit: she is about 6u wide and 12u tall with her hat. (x, y) is the point on the
-// ground between her feet.
+// cara.js: Cara the Capybara, painted in wash and ink, drawn to match her turnaround sheet: a friendly, upright capybara
+// with a big round head, two white buck teeth, large pink glasses, a straw boater with a pink band, a red-and-green
+// tartan scarf, a sleeveless pink dress with a gathered skirt, dark-brown paws and big dark-brown feet.
+// `u` is her size unit: she is about 6.5u wide and 12.3u tall with her hat (she's modelled 15 units tall and drawn at
+// 0.82 scale, so scenes keep the same sizes as before). (x, y) is the point on the ground between her feet.
 //
-// Body-local coordinates in the front view (for the o.draw / o.armL / o.armR hooks), in u, y up is negative:
-//   feet y 0; body centre (0, -3.75), 2.9u × 2.6u; swimsuit from y -5 down to about -1.3; head -10.75..-5.05;
-//   eyes (±1.3, -8.75); nose (0, -7.3); mouth (0, -5.95); hat brim y -10.4, crown top y -12.3.
-//   Arms hang from shoulders at (±2.45, -4.6) and are 2.6u long. o.armL / o.armR are called at the paw, in arm space
-//   (+x runs outward along the arm), so a held prop draws around (0, 0).
+// Body-local coordinates in the front view (model units, before the 0.82 scale; y up is negative):
+//   feet y 0; skirt hem y -1.8, waist -4.6; scarf -7.1; head -13.3..-7.3; eyes (±1.35, -10.9); nose (0, -9.9);
+//   mouth (0, -8.55); hat brim y -13. Arms hang from shoulders at (±2.55, -6.5) and are 3u long. o.armL / o.armR are
+//   called at the paw in arm space (+x runs outward along the arm), so a held prop draws around (0, 0).
 //
 // Everything here draws one frame; motion comes from what you pass in. The poses are:
 //   idle, happy, curious, surprised, excited, wave, talk   → caraPose(name, t) or acted changes with caraActs(t, keys)
@@ -16,36 +17,38 @@
 // Combine them with mixPose(...), which adds up the fields that stack (dx, dy, sq, rot) instead of overwriting them.
 
 const CARA = {
-  fur: '#BF8A57', furDk: '#94663F', furLt: '#E2B98A', muzzle: '#E6C49A', nose: '#6A4532', ink: '#3A2E3A',
-  suit: '#F27FA6', suitDk: '#DA6690', dot: '#FFF0F5',
-  frame: '#E9559A', lens: '#FFB3D1', straw: '#EFCD80', strawDk: '#C99E4E', band: '#F27FA6',
-  cheek: '#F6A0B6', mouth: '#5A2A33', tongue: '#F28CA0',
+  fur: '#B7804F', furDk: '#8E5E38', furLt: '#D9A878', muzzle: '#D8AE80', nose: '#5E4036', paw: '#5B3F36', ink: '#3A2E3A',
+  dress: '#EC4F9A', dressDk: '#C73C80', dressLt: '#F47DB5',
+  frame: '#EC4F9A', lens: '#EDE6F2', straw: '#D9B178', strawDk: '#A88452', band: '#E64592',
+  scarfR: '#C63A3F', scarfG: '#2F7B4A', scarfW: '#F3E9DC',
+  iris: '#6E4128', teeth: '#FFFBF2', cheek: '#F2A0A8', mouth: '#5A2A33', tongue: '#F28CA0',
 };
+const CARA_SCALE = .82;
 
 // ---------- views ----------
 // Drawn key views, never a 3D rotation. q and side face screen-right; flip: true mirrors them to face left.
-//   head: outline points.  body: [cx, rx].  eyes: [x, y, scale] from screen-left to screen-right.
+//   head: outline points.  body: [cx, rx].  dress: [x offset, width scale].  eyes: [x, y, scale] screen-left → right.
 //   muzzle / nose: [x, y, rx, ry].  mouth: [x, y].  cheeks / ears: [[x, y], ...].  hat: [x offset, width scale].
 //   arms: [shoulder x, dir (-1 left, 1 right, 0 forward), 'L' | 'R', layer (0 behind the body, 1 in front)].
-//   legs: [x, x] for the two legs.  lensX: how round the lenses look (1 = facing us).
+//   legs: [x, x].  lensX: how wide the lenses look (1 = facing us).  scarf: x of the hanging end.
 const CARA_VIEWS = {
   front: {
-    head: [[-2.3, -10.6], [0, -10.8], [2.3, -10.6], [2.65, -9.3], [2.8, -7.4], [2.85, -6.0], [2.2, -5.15], [0, -4.95], [-2.2, -5.15], [-2.85, -6.0], [-2.8, -7.4], [-2.65, -9.3]],
-    body: [0, 2.9], eyes: [[-1.3, -8.75, 1], [1.3, -8.75, 1]], muzzle: [0, -6.25, 2.35, 1.35], nose: [0, -7.1, 1.35, .5],
-    mouth: [0, -5.95], cheeks: [[-2.05, -7.35], [2.05, -7.35]], ears: [[-2.75, -10.95], [2.75, -10.95]], hat: [0, 1],
-    arms: [[-2.45, -1, 'L', 1], [2.45, 1, 'R', 1]], legs: [-1.3, 1.3], lensX: 1,
+    head: [[-2.6, -12.9], [0, -13.3], [2.6, -12.9], [3.1, -11.6], [3.15, -9.9], [2.8, -8.4], [1.9, -7.55], [0, -7.3], [-1.9, -7.55], [-2.8, -8.4], [-3.15, -9.9], [-3.1, -11.6]],
+    body: [0, 2.95], dress: [0, 1], eyes: [[-1.4, -11.1, 1], [1.4, -11.1, 1]], muzzle: [0, -8.85, 1.95, 1.35], nose: [0, -9.6, 1.08, .6],
+    mouth: [0, -8.55], cheeks: [[-2.2, -9.2], [2.2, -9.2]], ears: [], hat: [.2, 1], scarf: .7,
+    arms: [[-2.55, -1, 'L', 1], [2.55, 1, 'R', 1]], legs: [-1.05, 1.05], lensX: 1,
   },
   q: {
-    head: [[-2.2, -10.5], [.4, -10.75], [2.5, -10.4], [3.5, -9.4], [3.95, -8.0], [4.0, -6.5], [3.6, -5.5], [2.2, -5.05], [0, -5.05], [-1.8, -5.4], [-2.5, -6.9], [-2.65, -9.0]],
-    body: [.1, 2.75], eyes: [[.15, -8.8, .8], [1.95, -8.85, 1]], muzzle: [2.5, -6.35, 1.6, 1.3], nose: [3.2, -7.25, 1.0, .45],
-    mouth: [2.8, -5.85], cheeks: [[.9, -7.15]], ears: [[-2.35, -10.9], [2.95, -10.95]], hat: [.35, 1],
-    arms: [[2.4, 1, 'R', 0], [-2.25, -1, 'L', 1]], legs: [-1.15, 1.35], lensX: .82,
+    head: [[-2.5, -12.8], [.3, -13.3], [2.6, -12.9], [3.4, -11.9], [3.9, -10.6], [4.15, -9.5], [3.85, -8.4], [2.8, -7.7], [1.0, -7.4], [-1.2, -7.5], [-2.6, -8.4], [-3.0, -10.0], [-2.95, -11.6]],
+    body: [.1, 2.8], dress: [.15, .95], eyes: [[.1, -11.1, .82], [2.05, -11.15, 1]], muzzle: [2.35, -8.9, 1.8, 1.3], nose: [3.15, -9.65, .95, .58],
+    mouth: [2.5, -8.55], cheeks: [[.7, -9.25]], ears: [[-2.85, -11.8]], hat: [.1, 1], scarf: 1.3,
+    arms: [[2.45, 1, 'R', 0], [-2.35, -1, 'L', 1]], legs: [-.9, 1.2], lensX: .85,
   },
   side: {
-    head: [[-1.9, -10.2], [.8, -10.45], [2.6, -10.05], [3.85, -9.05], [4.35, -7.8], [4.35, -6.4], [3.9, -5.55], [2.4, -5.25], [.4, -5.35], [-1.6, -5.9], [-2.3, -7.6], [-2.3, -9.0]],
-    body: [0, 2.4], eyes: [[1.35, -8.85, 1]], muzzle: [3.05, -6.45, 1.35, 1.2], nose: [4.05, -7.45, .42, .5],
-    mouth: [3.65, -5.95], cheeks: [[1.95, -7.1]], ears: [[-1.85, -10.85]], hat: [.5, .85],
-    arms: [[.55, 0, 'R', 0], [.2, 0, 'L', 1]], legs: [-.8, .8], lensX: .6,
+    head: [[-2.4, -12.6], [.6, -13.2], [2.4, -12.8], [3.6, -11.7], [4.4, -10.6], [4.75, -9.6], [4.55, -8.7], [3.6, -8.0], [1.4, -7.6], [-1.0, -7.7], [-2.5, -8.6], [-2.9, -10.2], [-2.9, -11.6]],
+    body: [.2, 2.5], dress: [.25, .85], eyes: [[1.2, -11.15, 1]], muzzle: [3.35, -9.0, 1.45, 1.25], nose: [4.3, -9.75, .45, .5],
+    mouth: [3.4, -8.6], cheeks: [[1.6, -9.3]], ears: [[-2.6, -11.9]], hat: [-.1, .88], scarf: 1.9,
+    arms: [[.9, 0, 'R', 0], [.5, 0, 'L', 1]], legs: [-.5, .9], lensX: .45,
   },
 };
 // Heading in turns: 0 = front, .125 = 3/4 right, .25 = side right; negative headings face left.
@@ -62,7 +65,7 @@ function caraTurn(t, t0, t1, a0, a1) {
 // ---------- Cara ----------
 // Options (all optional):
 //   pose:  dx, dy (in u; negative dy = up), sq (squash; negative stretches), rot (pivots at the feet), flip,
-//          aL, aR (arm angles: 0 = straight out, + up, - down; about -1.1 hangs relaxed), bL, bR (elbow bend, -1..1),
+//          aL, aR (arm angles: 0 = straight out, + up, - down; about -1.2 hangs by the skirt), bL, bR (elbow bend, -1..1),
 //          walk (leg phase; the legs step), noShadow
 //   view:  front | q | side (see CARA_VIEWS). smear 0..1 for fast turns
 //   face:  eyes (normal, happy, wide, shine, closed, look), mouth (smile, grin, open, openS, O, small, flat),
@@ -71,22 +74,22 @@ function caraTurn(t, t0, t1, a0, a1) {
 //   extras: emote + emoteK + emoteAge (see emotes.js), draw(u, sw), armL(u, sw), armR(u, sw)
 //   boil:  boilKey (a stable id for her boil seeds; defaults to call order)
 let CARA_N = 0;
-function cara(x, y, u, o = {}) {
+function cara(x, y, U, o = {}) {
   const id = o.boilKey ?? 'c' + (++CARA_N), rs = part => boilSeed(`cara ${id} ${part}`);
-  const V = CARA_VIEWS[o.view] || CARA_VIEWS.front, C = CARA;
-  x += (o.dx || 0) * u;
-  const dy = (o.dy || 0) * u, sq = o.sq || 0, sm = clamp(o.smear || 0);
-  const sw = clamp(u / 16, .4, 2.2) * .85, J = u * .05;
+  const V = CARA_VIEWS[o.view] || CARA_VIEWS.front, C = CARA, u = U * CARA_SCALE;
+  x += (o.dx || 0) * U;
+  const dy = (o.dy || 0) * U, sq = o.sq || 0, sm = clamp(o.smear || 0);
+  const sw = clamp(U / 16, .4, 2.2) * .85, J = u * .04;
   const P = pts => pts.map(([a, b]) => [a * u, b * u]);
 
   rs('shadow');
   if (!o.noShadow) {
     const f = 1 - Math.min(.5, Math.abs(o.dy || 0) * .08);
-    paint(ellPts(x, y + u * .12, u * 3.4 * f, u * .7 * f, 22), { fill: C.ink, fillOp: 60, bleed: .2, tex: .3, border: .1, ink: null });
+    paint(ellPts(x, y + U * .12, U * 3.3 * f, U * .65 * f, 22), { fill: C.ink, fillOp: 60, bleed: .2, tex: .3, border: .1, ink: null });
   }
   if (sm > .05) for (const s of [-1, 1]) for (let i = 0; i < 3; i++) {   // soft smear streaks on a quick turn
-    const yy = y + dy - (8.5 - i * 2.2) * u;
-    inkLine([[x + s * 2.6 * u, yy], [x + s * (2.6 + 2.4 * sm) * u, yy + jit(u * .1)]], 1.6 * sm, C.furLt, 'dry', .3);
+    const yy = y + dy - (9 - i * 2.4) * U;
+    inkLine([[x + s * 2.8 * U, yy], [x + s * (2.8 + 2.4 * sm) * U, yy + jit(U * .1)]], 1.6 * sm, C.furLt, 'dry', .3);
   }
 
   push();
@@ -96,80 +99,90 @@ function cara(x, y, u, o = {}) {
 
   const arm = ([sx, dir, which, layer]) => {
     rs('arm' + which);
-    const a = which === 'L' ? (o.aL ?? -1.1) : (o.aR ?? -1.1), bend = which === 'L' ? (o.bL ?? .15) : (o.bR ?? .15);
-    const hook = which === 'L' ? o.armL : o.armR, d = dir === 0 ? 1 : dir, L = 2.6 * u;
-    const x0 = sx * u, y0 = -4.6 * u, ang = dir === 0 ? a : a;   // side view: 0 = straight forward
-    const ex = x0 + d * Math.cos(ang) * L, ey = y0 - Math.sin(ang) * L;
+    const a = which === 'L' ? (o.aL ?? -1.2) : (o.aR ?? -1.2), bend = which === 'L' ? (o.bL ?? .15) : (o.bR ?? .15);
+    const hook = which === 'L' ? o.armL : o.armR, d = dir === 0 ? 1 : dir, L = 3.0 * u;
+    const x0 = sx * u, y0 = -6.5 * u;
+    const ex = x0 + d * Math.cos(a) * L, ey = y0 - Math.sin(a) * L;
     const nx = -(ey - y0) / L, ny = (ex - x0) / L, m = [(x0 + ex) / 2 + nx * bend * u * d, (y0 + ey) / 2 + ny * bend * u * d];
-    const col = layer === 0 ? mixCol(C.fur, C.furDk, .45) : C.fur;
-    paint(ribbon([[x0, y0], m, [ex, ey]], 1.05 * u, .85 * u), { wash: col, ink: C.ink, sw: sw * .8 });
-    paint(ellPts(ex, ey, .55 * u, .5 * u, 12, J * .3, Math.atan2(ey - m[1], ex - m[0])), { wash: layer === 0 ? mixCol(C.furDk, C.ink, .15) : C.furDk, ink: C.ink, sw: sw * .7 });
-    if (hook) { push(); translate(ex, ey); rotate(Math.atan2(ey - m[1], ex - m[0])); if (d < 0) scale(1, -1); hook(u, sw); pop(); }
+    const col = layer === 0 ? mixCol(C.fur, C.furDk, .45) : C.fur, ang = Math.atan2(ey - m[1], ex - m[0]);
+    paint(ribbon([[x0, y0], m, [ex, ey]], 1.45 * u, 1.15 * u), { wash: col, ink: C.ink, sw: sw * .8 });
+    paint(ellPts(ex + Math.cos(ang) * .25 * u, ey + Math.sin(ang) * .25 * u, .7 * u, .6 * u, 14, J * .3, ang), { wash: layer === 0 ? mixCol(C.paw, C.ink, .2) : C.paw, ink: C.ink, sw: sw * .7 });
+    if (hook) { push(); translate(ex, ey); rotate(ang); if (d < 0) scale(1, -1); hook(u, sw); pop(); }
   };
 
-  // far arms, legs, body and swimsuit, head, hat, then near arms
+  // far arm, legs and feet, body, dress, scarf, head, hat, then near arms
   V.arms.filter(a => a[3] === 0).forEach(arm);
   V.legs.forEach((lx, i) => {
     rs('leg' + i);
     let lift = 0, sx = 0;
-    if (o.walk != null) { const ph = (o.walk + (i ? .5 : 0)) * TAU; lift = Math.max(0, Math.sin(ph)) * .55; sx = Math.cos(ph) * (o.view === 'front' ? .1 : .45); }
-    const far = V !== CARA_VIEWS.front && i === 0;
-    paint(rrPts((lx + sx - .72) * u, -2.3 * u, 1.44 * u, (2.3 - lift) * u, .62 * u, J * .4), { wash: far ? mixCol(C.furDk, C.ink, .15) : C.furDk, ink: C.ink, sw: sw * .8 });
-    for (const k of [-1, 0, 1]) inkLine(P([[lx + sx + k * .38, -lift - .05], [lx + sx + k * .38, -lift - .38]]), sw * .4, C.ink, 'inkfine', 0);   // toes
+    if (o.walk != null) { const ph = (o.walk + (i ? .5 : 0)) * TAU; lift = Math.max(0, Math.sin(ph)) * .6; sx = Math.cos(ph) * (o.view === 'front' ? .1 : .5); }
+    const far = V !== CARA_VIEWS.front && i === 0, fx = lx + sx, toe = V === CARA_VIEWS.front ? 0 : .45;
+    paint(rrPts((fx - .65) * u, (-2.4 - lift) * u, 1.3 * u, 2.0 * u, .55 * u, J * .4), { wash: far ? mixCol(C.fur, C.furDk, .5) : C.fur, ink: C.ink, sw: sw * .8 });
+    paint(ellPts((fx + toe) * u, (-.42 - lift) * u, (1.0 + toe * .4) * u, .48 * u, 16, J * .3), { wash: far ? mixCol(C.paw, C.ink, .2) : C.paw, ink: C.ink, sw: sw * .8 });
+    for (const k of [-.45, 0, .45]) inkLine(P([[fx + toe + k * .9, -.15 - lift], [fx + toe + k * .9, -.45 - lift]]), sw * .4, C.ink, 'inkfine', 0);   // toes
   });
 
   rs('body');
-  const [bcx, brx] = V.body, bcy = -3.75, bry = 2.6;
-  const body = ellPts(bcx * u, bcy * u, brx * u, bry * u, 30, J);
-  paint(body, { wash: C.fur, ink: null });
-  // swimsuit: the body shape cut by a gently curved neckline above and leg openings below
-  const nx = x => clamp((x / u - bcx) / brx, -1, 1);
-  const suit = ellPts(bcx * u, bcy * u, brx * u * .995, bry * u * .995, 36).map(([px, py]) =>
-    [px, clamp(py, (-5.0 + .35 * nx(px) ** 2) * u, (-1.25 - .95 * nx(px) ** 2) * u)]);
-  paint(suit, { wash: C.suit, ink: null });
-  paint(ellPts((bcx - .8) * u, -4.1 * u, 1.2 * u, .7 * u, 14, 0, -.3), { fill: C.dot, fillOp: 70, bleed: .15, tex: .6, ink: null });   // sheen
-  const dots = [[-1.5, -3.2], [.1, -4.3], [1.5, -3.0], [-.4, -2.3], [1.0, -4.1], [-1.9, -4.2], [.6, -2.2]];
-  dots.forEach(([dx0, dy0], i) => {
-    const px = bcx + dx0 * brx / 2.9;
-    if (Math.abs(px - bcx) < brx * .82) paint(ellPts(px * u, dy0 * u, .27 * u, .27 * u, 10), { wash: C.dot, ink: null });
-  });
-  paint(suit, { ink: mixCol(C.suitDk, C.ink, .3), sw: sw * .7 });
-  for (const s of V === CARA_VIEWS.side ? [1] : [-1, 1]) {   // straps over the shoulders
-    const sx = bcx + s * 1.35 * brx / 2.9;
-    paint(ribbon(P([[sx, -4.75], [sx + s * .1, -5.3], [sx + s * .25, -5.8]]), .5 * u, .42 * u), { wash: C.suit, ink: mixCol(C.suitDk, C.ink, .3), sw: sw * .6 });
-  }
-  paint(body, { ink: C.ink, sw });
+  const [bcx, brx] = V.body;
+  const body = ellPts(bcx * u, -5.3 * u, brx * u, 2.4 * u, 30, J);
+  paint(body, { wash: C.fur, ink: C.ink, sw });
+
+  // the dress: a fitted bodice and a gathered A-line skirt with a waist seam
+  rs('dress');
+  const [dx0, dw] = V.dress, D = pts => pts.map(([a, b]) => [(dx0 + a * dw) * u, b * u]);
+  paint(D([[-2.15, -7.2], [2.15, -7.2], [2.35, -5.6], [2.5, -4.6], [-2.5, -4.6], [-2.35, -5.6]]), { wash: C.dress, ink: C.ink, sw: sw * .8 });
+  const skirt = D([[-2.5, -4.65], [2.5, -4.65], [2.95, -3.3], [3.35, -1.85], [2.2, -1.65], [1.1, -1.8], [0, -1.65], [-1.1, -1.8], [-2.2, -1.65], [-3.35, -1.85], [-2.95, -3.3]]);
+  paint(skirt, { wash: C.dress, ink: null, curv: .25 });
+  paint(D([[-2.2, -4.2], [-1.2, -4.3], [-1.6, -2.2], [-2.8, -2.2]]), { fill: C.dressLt, fillOp: 80, bleed: .2, tex: .5, ink: null });   // soft light on the skirt
+  paint(skirt, { ink: C.ink, sw: sw * .8, curv: .25 });
+  for (const k of [-1.9, -.95, 0, .95, 1.9]) inkLine(D([[k * .95, -4.4], [k * 1.2, -2.0]]), sw * .45, C.dressDk, 'inkfine', .2);   // gathers
+  inkLine(D([[-2.5, -4.62], [0, -4.55], [2.5, -4.62]]), sw * .6, C.dressDk, 'inkfine', .5);                                      // waist seam
+
+  // the tartan scarf: a band round the neck and one fringed end hanging down the front
+  rs('scarf');
+  const sx0 = V.scarf, stripe = (pts, col, w) => inkLine(P(pts), sw * w, col, 'ink', 0);
+  paint(ribbon(P([[sx0, -7.0], [sx0 + .25, -5.4], [sx0 + .45, -3.6]]), 1.1 * u, 1.05 * u), { wash: C.scarfR, ink: C.ink, sw: sw * .7 });
+  paint(ribbon(P([[-2.7 + dx0, -7.15], [dx0, -6.75], [2.7 + dx0, -7.15]]), 1.25 * u, 1.25 * u), { wash: C.scarfR, ink: C.ink, sw: sw * .7 });
+  for (const k of [-1.9, -.7, .5, 1.7]) stripe([[k + dx0, -7.6], [k + dx0 + .12, -6.7]], C.scarfG, 1.0);    // tartan: green bars
+  stripe([[-2.5 + dx0, -7.05], [dx0, -6.7], [2.5 + dx0, -7.05]], C.scarfG, .9);
+  stripe([[-2.5 + dx0, -7.3], [dx0, -6.95], [2.5 + dx0, -7.3]], C.scarfW, .35);
+  for (const yy of [-6.2, -5.1, -4.1]) stripe([[sx0 - .3 + (yy + 7) * .12, yy], [sx0 + .78 + (yy + 7) * .12, yy]], C.scarfG, 1.0);
+  stripe([[sx0 + .2, -6.9], [sx0 + .6, -3.75]], C.scarfG, .8);
+  stripe([[sx0 - .05, -5.6], [sx0 + 1.05, -5.6]], C.scarfW, .35); stripe([[sx0 + .45, -6.9], [sx0 + .82, -3.75]], C.scarfW, .3);
+  for (let i = 0; i < 6; i++) { const fx = sx0 + .02 + i * .19; stripe([[fx, -3.6], [fx + .02 + .03 * Math.sin(T * 3 + i), -2.95]], i % 2 ? C.scarfG : C.scarfR, .6); }   // fringe
 
   rs('head');
-  push(); translate(0, (o.headDy || 0) * u);
+  push(); translate(0, (o.headDy || 0) * u); translate(0, -7.4 * u); scale(1.22, 1.14); translate(0, 7.4 * u);   // her head is big and broad
   for (const [ex, ey] of V.ears) {
-    paint(ellPts(ex * u, ey * u, .5 * u, .55 * u, 14, J * .4), { wash: C.furDk, ink: C.ink, sw: sw * .8 });
-    paint(ellPts(ex * u, (ey + .1) * u, .24 * u, .28 * u, 10), { wash: C.cheek, ink: null });
+    paint(ellPts(ex * u, ey * u, .55 * u, .6 * u, 14, J * .4), { wash: C.furDk, ink: C.ink, sw: sw * .8 });
+    paint(ellPts(ex * u, (ey + .1) * u, .25 * u, .3 * u, 10), { wash: C.paw, ink: null });
   }
   const head = P(V.head);
   paint(head, { wash: C.fur, ink: null, curv: .6 });
-  paint(ellPts((V.eyes[V.eyes.length - 1][0] - 1.1) * u, -9.6 * u, 1.9 * u, .7 * u, 16, 0, -.1), { fill: C.furLt, fillOp: 110, bleed: .18, tex: .7, border: .7, ink: null });
+  paint(ellPts((V.eyes[V.eyes.length - 1][0] - 1.2) * u, -12.5 * u, 1.9 * u, .6 * u, 16, 0, -.1), { fill: C.furLt, fillOp: 100, bleed: .18, tex: .7, border: .7, ink: null });
   const [mx, my, mrx, mry] = V.muzzle;
-  paint(ellPts(mx * u, my * u, mrx * u, mry * u, 22, J * .3), { wash: mixCol(C.fur, C.muzzle, .4), ink: null });   // subtle: capybaras have no bear-style pale muzzle
+  paint(ellPts(mx * u, my * u, mrx * u, mry * u, 22, J * .3), { wash: C.muzzle, ink: null });
   paint(head, { ink: C.ink, sw, curv: .6 });
-  // cheeks
   const bl = clamp(o.blush ?? .35);
-  if (bl > .02) for (const [cx, cy] of V.cheeks) paint(ellPts(cx * u, cy * u, .55 * u, .32 * u, 12), { fill: C.cheek, fillOp: 90 + 110 * bl, bleed: .2, ink: null });
-  // nose: a broad, soft capybara nose with a shine
-  rs('nose');
-  const [nx0, ny0, nrx, nry] = V.nose;
-  paint(rrPts((nx0 - nrx) * u, (ny0 - nry) * u, 2 * nrx * u, 2 * nry * u, nry * .9 * u, J * .15), { wash: C.nose, ink: C.ink, sw: sw * .6 });   // broad, flat capybara nose
-  paint(ellPts((nx0 - nrx * .35) * u, (ny0 - nry * .35) * u, nrx * .25 * u, nry * .28 * u, 8), { wash: C.muzzle, ink: null });
-  for (const s of V === CARA_VIEWS.side ? [1] : [-1, 1]) inkLine(P([[nx0 + s * nrx * .45 - .1, ny0 + nry * .05], [nx0 + s * nrx * .45 + .1 * s, ny0 + nry * .45]]), sw * .5, C.ink, 'inkfine', 0);
-  inkLine(P([[nx0, ny0 + nry], [V.mouth[0], V.mouth[1] - .25]]), sw * .55, C.ink, 'inkfine', 0);
+  if (bl > .02) for (const [cx, cy] of V.cheeks) paint(ellPts(cx * u, cy * u, .6 * u, .32 * u, 12), { fill: C.cheek, fillOp: 70 + 110 * bl, bleed: .2, ink: null });
+  rs('whiskers');
+  for (const s of V === CARA_VIEWS.front ? [-1, 1] : [1]) for (const k of [-.2, .15, .5]) {
+    const x0 = mx + s * mrx * .7, y0 = my + k * .5;
+    inkLine(P([[x0, y0], [x0 + s * 1.1, y0 - .15 + k * .35]]), sw * .3, mixCol(C.ink, C.muzzle, .3), 'inkfine', .4);
+  }
   rs('mouth');
-  caraMouth(u, o.mouth ?? 'smile', sw, V.mouth[0], V.mouth[1], V === CARA_VIEWS.front ? 1 : .8);
+  caraMouth(u, o.mouth ?? 'smile', sw, V.mouth[0], V.mouth[1], V === CARA_VIEWS.front ? 1 : V === CARA_VIEWS.q ? .85 : .6);
+  rs('nose');   // a big, soft, dark capybara nose with a shine, sitting on top of the muzzle
+  const [nx0, ny0, nrx, nry] = V.nose;
+  paint(ellPts(nx0 * u, ny0 * u, nrx * u, nry * u, 18, J * .15), { wash: C.nose, ink: C.ink, sw: sw * .6, curv: .4 });
+  paint(ellPts((nx0 - nrx * .3) * u, (ny0 - nry * .4) * u, nrx * .3 * u, nry * .25 * u, 8), { wash: C.muzzle, ink: null });
+  inkLine(P([[nx0, ny0 + nry], [V.mouth[0], V.mouth[1] - .2]]), sw * .5, C.ink, 'inkfine', 0);
   rs('eyes');
   caraEyes(u, o, sw, V);
   if (!o.noGlasses) { rs('glasses'); caraGlasses(u, o, sw, V); }
   if (!o.noHat) {
     rs('hat');
-    push(); translate(V.hat[0] * u, (-10.4 + (o.hatDy || 0)) * u); rotate(-.06 + (o.hatRot || 0)); scale(V.hat[1], 1); strawHat(u, sw); pop();
+    push(); translate(V.hat[0] * u, (-13.05 + (o.hatDy || 0)) * u); rotate(-.1 + (o.hatRot || 0)); scale(V.hat[1], 1); strawHat(u, sw); pop();
   }
   pop();
 
@@ -180,83 +193,75 @@ function cara(x, y, u, o = {}) {
   rs('emote');
   if (o.emote) {
     const dir = o.flip ? -1 : 1, top = EMOTE_TOP.includes(o.emote);
-    emote(o.emote, x + dir * (top ? 0 : 4.3) * u, y + dy - (top ? 14.2 : 12) * u * (1 - sq), u * .8, o.emoteK ?? 1, o.emoteAge ?? T);
+    emote(o.emote, x + dir * (top ? 0 : 4.3) * U, y + dy - (top ? 14.2 : 12) * U * (1 - sq), U * .8, o.emoteK ?? 1, o.emoteAge ?? T);
   }
   rs('after');
 }
 
 // ---------- face ----------
+// Big friendly eyes: white, a warm brown iris, a dark pupil and two highlights. Happy / closed are ink arcs.
 function caraEyes(u, o, sw, V) {
-  const C = CARA, lx = (o.lookX || 0) * .28, ly = (o.lookY || 0) * .22, sqz = clamp(o.squint || 0);
+  const C = CARA, lx = (o.lookX || 0) * .22, ly = (o.lookY || 0) * .18, sqz = clamp(o.squint || 0);
   const blink = ['normal', 'look', 'wide', 'shine'].includes(o.eyes || 'normal') && ((T * .8 + (o.seed || 0) * 1.3) % 3.7) < .12;
   for (const [ex, ey, s] of V.eyes) {
-    push(); translate(ex * u, ey * u); scale(s * V.lensX + (1 - V.lensX) * .6, s);
+    push(); translate(ex * u, ey * u); scale(s * (V.lensX * .7 + .3), s);
     const kind = sqz > .8 || blink ? 'closed' : o.eyes || 'normal';
     const line = (pts, w = 1) => inkLine(pts.map(([a, b]) => [a * u, b * u]), sw * w, C.ink, 'ink', .5);
-    switch (kind) {
-      case 'happy': line([[-.45, .2], [0, -.25], [.45, .2]], 1.1); break;                  // ∩ smiling eyes
-      case 'closed': line([[-.45, 0], [0, .25], [.45, 0]], 1.1); break;                   // ∪ shut
-      case 'wide':
-        paint(ellPts(lx * u, ly * u, .44 * u, .58 * (1 - sqz) * u, 14), { wash: C.ink, ink: null });
-        paint(ellPts((lx - .14) * u, (ly - .2) * u, .15 * u, .18 * u, 8), { wash: PAL.cream, ink: null });
-        paint(ellPts((lx + .14) * u, (ly + .2) * u, .07 * u, .07 * u, 6), { wash: PAL.cream, ink: null });
-        break;
-      case 'shine':   // delighted: big glossy eyes with a star glint
-        paint(ellPts(lx * u, ly * u, .42 * u, .54 * (1 - sqz) * u, 14), { wash: C.ink, ink: null });
-        paint(starPts((lx - .1) * u, (ly - .15) * u, .24 * u, .4, 4), { wash: PAL.cream, ink: null });
-        paint(ellPts((lx + .16) * u, (ly + .22) * u, .07 * u, .07 * u, 6), { wash: PAL.cream, ink: null });
-        break;
-      default:        // normal / look
-        paint(ellPts(lx * u, ly * u, .33 * u, .44 * (1 - sqz) * u, 12), { wash: C.ink, ink: null });
-        paint(ellPts((lx - .1) * u, (ly - .15) * u, .12 * u, .14 * u, 8), { wash: PAL.cream, ink: null });
+    if (kind === 'happy') line([[-.55, .2], [0, -.3], [.55, .2]], 1.3);          // ∩ smiling eyes
+    else if (kind === 'closed') line([[-.55, 0], [0, .3], [.55, 0]], 1.3);       // ∪ shut
+    else {
+      const big = kind === 'wide' ? 1.15 : kind === 'shine' ? 1.08 : 1, h = 1 - sqz;
+      paint(ellPts(0, 0, .62 * big * u, .64 * big * h * u, 18), { wash: C.teeth, ink: C.ink, sw: sw * .6 });
+      paint(ellPts(lx * u, ly * u, .44 * big * u, .46 * big * h * u, 16), { wash: C.iris, ink: null });
+      paint(ellPts(lx * u, ly * u, .24 * big * u, .26 * big * h * u, 12), { wash: C.ink, ink: null });
+      if (kind === 'shine') paint(starPts((lx - .15) * u, (ly - .15) * u, .24 * u, .4, 4), { wash: C.teeth, ink: null });
+      else paint(ellPts((lx - .15) * u, (ly - .17) * u, .14 * u, .15 * u, 8), { wash: C.teeth, ink: null });
+      paint(ellPts((lx + .17) * u, (ly + .17) * u, .06 * u, .06 * u, 6), { wash: C.teeth, ink: null });
     }
     pop();
   }
 }
-// Pink sunglasses: round frames with a pale pink tint, so her eyes still read through them (small children read faces).
+// Her big pink glasses: rounded-square frames with clear lenses (children read faces, so her eyes always show).
 function caraGlasses(u, o, sw, V) {
-  const C = CARA, L = V.eyes.map(([ex, ey, s]) => [ex * u, ey * u, .98 * s * u]);
-  for (const [ex, ey, r] of L) {
-    paint(ellPts(ex, ey, r * V.lensX, r, 22), { wash: C.lens, washOp: 95, ink: C.frame, sw: sw * 1.5 });
-    inkLine([[ex - r * .5 * V.lensX, ey - r * .15], [ex - r * .15 * V.lensX, ey - r * .55]], sw * .5, PAL.cream, 'inkfine', 0);   // glint
+  const C = CARA, L = V.eyes.map(([ex, ey, s]) => ({ x: ex * u, y: ey * u, w: 2.65 * s * V.lensX * u, h: 1.95 * s * u }));
+  for (const l of L) {
+    paint(rrPts(l.x - l.w / 2, l.y - l.h / 2, l.w, l.h, Math.min(l.w, l.h) * .38), { wash: C.lens, washOp: 15, ink: C.frame, sw: sw * 1.35 });
+    inkLine([[l.x - l.w * .28, l.y - l.h * .05], [l.x - l.w * .1, l.y - l.h * .3]], sw * .6, C.teeth, 'inkfine', 0);   // glint
   }
-  if (L.length > 1) inkLine([[L[0][0] + L[0][2] * V.lensX, L[0][1] - .1 * u], [(L[0][0] + L[1][0]) / 2, L[0][1] - .3 * u], [L[1][0] - L[1][2] * V.lensX, L[1][1] - .1 * u]], sw * 1.1, C.frame, 'ink', .5);
+  if (L.length > 1) inkLine([[L[0].x + L[0].w / 2, L[0].y - .25 * u], [(L[0].x + L[1].x) / 2, L[0].y - .45 * u], [L[1].x - L[1].w / 2, L[1].y - .25 * u]], sw * 1.2, C.frame, 'ink', .5);
   const back = L[0];   // the arm runs back from the rearmost lens toward the ear
-  if (V !== CARA_VIEWS.front) inkLine([[back[0] - back[2] * V.lensX, back[1] - .2 * u], [back[0] - (V === CARA_VIEWS.side ? 3.0 : 1.9) * u, back[1] - .45 * u]], sw * 1.1, C.frame, 'ink', 0);
-  else for (const s of [-1, 1]) inkLine([[s * 2.25 * u, -8.9 * u], [s * 2.75 * u, -9.05 * u]], sw * 1.1, C.frame, 'ink', 0);
+  if (V !== CARA_VIEWS.front) inkLine([[back.x - back.w / 2, back.y - .3 * u], [back.x - back.w / 2 - (V === CARA_VIEWS.side ? 3.0 : 2.0) * u, back.y - .6 * u]], sw * 1.2, C.frame, 'ink', 0);
+  else for (const s of [-1, 1]) inkLine([[s * 2.7 * u, -11.35 * u], [s * 3.1 * u, -11.5 * u]], sw * 1.2, C.frame, 'ink', 0);
 }
-// Mouths: smile (closed, the resting face), grin, open (talking), openS (small open, talking), O (surprised), small, flat
+// Mouths, all with her two white buck teeth: smile (the resting face: closed, teeth peeking), grin (her signature open
+// smile), open and openS (talking), O (surprised), small, flat.
 function caraMouth(u, m, sw, mx, my, w = 1) {
   const C = CARA, P = pts => pts.map(([a, b]) => [(mx + a * w) * u, (my + b) * u]);
-  const line = (pts, k = .8) => inkLine(P(pts), sw * k, C.ink, 'ink', .6);
+  const teeth = (top, h) => { for (const s of [-1, 1]) paint(P([[s * .04, top], [s * .5, top], [s * .5, top + h], [s * .04, top + h]]), { wash: C.teeth, ink: C.ink, sw: sw * .45 }); };
+  const open = (pts, tongueY, tongueW) => {
+    paint(P(pts), { wash: C.mouth, ink: C.ink, sw: sw * .7, curv: .5 });
+    if (tongueW) paint(ellPts(mx * u, (my + tongueY) * u, tongueW * w * u, .22 * u, 12), { wash: C.tongue, ink: null });
+  };
   switch (m) {
-    case 'grin':
-      paint(P([[-.8, -.15], [.8, -.15], [.45, .45], [0, .6], [-.45, .45]]), { wash: C.mouth, ink: C.ink, sw: sw * .6, curv: .5 });
-      paint(ellPts(mx * u, (my + .38) * u, .38 * w * u, .15 * u, 10), { wash: C.tongue, ink: null }); break;
-    case 'open':
-      paint(ellPts(mx * u, (my + .1) * u, .5 * w * u, .45 * u, 14), { wash: C.mouth, ink: C.ink, sw: sw * .6 });
-      paint(ellPts(mx * u, (my + .32) * u, .3 * w * u, .14 * u, 10), { wash: C.tongue, ink: null }); break;
-    case 'openS':
-      paint(ellPts(mx * u, my * u, .38 * w * u, .24 * u, 12), { wash: C.mouth, ink: C.ink, sw: sw * .55 }); break;
-    case 'O':
-      paint(ellPts(mx * u, (my + .1) * u, .36 * w * u, .46 * u, 12), { wash: C.mouth, ink: C.ink, sw: sw * .6 }); break;
-    case 'small': paint(ellPts(mx * u, my * u, .18 * w * u, .16 * u, 8), { wash: C.mouth, ink: null }); break;
-    case 'flat': line([[-.4, 0], [.4, 0]]); break;
-    default: line([[-.7, -.2], [0, .2], [.7, -.2]]);   // smile
+    case 'grin': open([[-1.1, -.1], [0, .05], [1.1, -.1], [.8, .7], [0, 1.0], [-.8, .7]], .72, .55); teeth(-.02, .5); break;
+    case 'open': open([[-.8, -.05], [0, .05], [.8, -.05], [.55, .6], [0, .8], [-.55, .6]], .58, .4); teeth(0, .42); break;
+    case 'openS': open([[-.6, 0], [0, .05], [.6, 0], [.4, .38], [0, .5], [-.4, .38]], 0, 0); teeth(.02, .32); break;
+    case 'O': open([[-.45, 0], [0, -.05], [.45, 0], [.45, .6], [0, .8], [-.45, .6]], 0, 0); teeth(0, .3); break;
+    case 'small': teeth(.02, .38); inkLine(P([[-.4, .05], [0, .12], [.4, .05]]), sw * .6, C.ink, 'ink', .5); break;
+    case 'flat': teeth(.02, .38); inkLine(P([[-.6, .02], [.6, .02]]), sw * .7, C.ink, 'ink', 0); break;
+    default: teeth(.02, .45); inkLine(P([[-1.0, -.2], [-.5, .08], [0, .05], [.5, .08], [1.0, -.2]]), sw * .8, C.ink, 'ink', .6);   // smile
   }
 }
-// The straw hat, drawn around the brim centre: brim, crown, a pink band and a little flower.
+// The straw boater, drawn around the brim centre: a wide brim, a low crown and a pink band.
 function strawHat(u, sw) {
   const C = CARA, P = pts => pts.map(([a, b]) => [a * u, b * u]);
-  paint(ellPts(0, 0, 4.1 * u, .78 * u, 30, u * .03), { wash: C.straw, ink: C.ink, sw: sw * .9 });
-  inkLine(P([[-3.3, .1], [0, .45], [3.3, .1]]), sw * .45, C.strawDk, 'inkfine', .5);   // woven rings
-  inkLine(P([[-2.6, -.05], [0, .22], [2.6, -.05]]), sw * .4, C.strawDk, 'inkfine', .5);
-  const crown = P([[-2.15, .05], [-2.05, -1.35], [-1.3, -1.9], [1.3, -1.9], [2.05, -1.35], [2.15, .05]]);
+  paint(ellPts(0, 0, 4.1 * u, 1.05 * u, 32, u * .03), { wash: C.straw, ink: C.ink, sw: sw * .9 });
+  for (const [rx, ry] of [[3.5, .78], [2.9, .5]]) inkLine(P([[-rx, .05], [-rx * .5, ry * .95], [0, ry], [rx * .5, ry * .95], [rx, .05]]), sw * .4, C.strawDk, 'inkfine', .5);   // woven rings
+  const crown = P([[-2.35, .1], [-2.3, -1.2], [-1.6, -1.75], [1.6, -1.75], [2.3, -1.2], [2.35, .1]]);
   paint(crown, { wash: C.straw, ink: C.ink, sw: sw * .9, curv: .4 });
-  paint(ellPts(-.7 * u, -1.25 * u, .9 * u, .35 * u, 12), { fill: PAL.cream, fillOp: 90, bleed: .15, ink: null });
-  paint(P([[-2.12, -.1], [2.12, -.1], [2.08, -.62], [-2.08, -.62]]), { wash: C.band, ink: C.ink, sw: sw * .6 });
-  for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + .4; paint(ellPts((1.45 + Math.cos(a) * .32) * u, (-.4 + Math.sin(a) * .32) * u, .26 * u, .26 * u, 8), { wash: PAL.cream, ink: C.ink, sw: sw * .35 }); }
-  paint(ellPts(1.45 * u, -.4 * u, .18 * u, .18 * u, 8), { wash: SOFT.flowerY, ink: null });
+  paint(ellPts(-.8 * u, -1.25 * u, .9 * u, .3 * u, 12), { fill: PAL.cream, fillOp: 80, bleed: .15, ink: null });
+  paint(P([[-2.35, 0], [2.35, 0], [2.32, -.62], [-2.32, -.62]]), { wash: C.band, ink: C.ink, sw: sw * .6 });
+  inkLine(P([[-2.1, -1.0], [0, -1.1], [2.1, -1.0]]), sw * .4, C.strawDk, 'inkfine', .5);
 }
 
 // ---------- poses ----------
@@ -264,7 +269,7 @@ function strawHat(u, sw) {
 // it (kept soft for young viewers). fade = the emote is a one-off that fades.
 const _cb = t => { const bp = bpOf(t), s1 = Math.sin(bp * Math.PI); return { bp, s1, ab: Math.abs(s1), hit: pulse(t, 5), s2: Math.sin(bp * TAU) }; };
 const CARA_POSES = {
-  idle:      { eyes: 'normal', mouth: 'smile', blush: .35, take: .25, body: t => { const b = _cb(t), br = Math.sin(t * TAU * .4); return { dy: -.12 * b.ab, sq: .02 * br, aL: -1.12 + .04 * br, aR: -1.08 - .04 * br, bL: .15, bR: .2 }; } },
+  idle:      { eyes: 'normal', mouth: 'smile', blush: .35, take: .25, body: t => { const b = _cb(t), br = Math.sin(t * TAU * .4); return { dy: -.12 * b.ab, sq: .02 * br, aL: -1.25 + .04 * br, aR: -1.22 - .04 * br, bL: .15, bR: .2 }; } },
   happy:     { eyes: 'happy', mouth: 'grin', blush: .7, take: .5, body: t => { const b = _cb(t); return { dy: -.55 * b.ab, sq: .05 * b.hit, rot: .025 * b.s1, aL: -.75 + .2 * b.s1, aR: -.75 - .2 * b.s1 }; } },
   curious:   { eyes: 'look', mouth: 'small', blush: .3, emote: '?', take: .35, body: t => { const b = _cb(t); return { rot: .07 + .015 * b.s1, dy: -.08 * b.ab, lookX: .6, lookY: -.6, aL: -1.1, aR: -.55, bR: .6 }; } },
   surprised: { eyes: 'wide', mouth: 'O', blush: .3, emote: '!', fade: true, take: .8, body: t => { const b = _cb(t); return { sq: -.06, dy: -.15 - .08 * b.ab, aL: .15, aR: .15, bL: -.3, bR: -.3 }; } },
